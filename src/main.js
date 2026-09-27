@@ -4,7 +4,7 @@ import "./style.css";
 const MODEL = "Llama-3.2-1B-Instruct-q4f16_1-MLC";
 const MODEL_URL =
   "https://huggingface.co/mlc-ai/Llama-3.2-1B-Instruct-q4f16_1-MLC";
-const MODEL_SHARD_URL = `${MODEL_URL}/resolve/main/params_shard_0.bin";
+const MODEL_SHARD_URL = `${MODEL_URL}/resolve/main/params_shard_0.bin`;
 const appConfig = {
   ...prebuiltAppConfig,
   cacheBackend: "opfs",
