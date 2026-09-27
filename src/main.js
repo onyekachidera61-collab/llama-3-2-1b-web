@@ -1,7 +1,9 @@
-import { CreateMLCEngine } from "@mlc-ai/web-llm";
+import { CreateMLCEngine, prebuiltAppConfig } from "@mlc-ai/web-llm";
 import "./style.css";
 
 const MODEL = "Llama-3.2-1B-Instruct-q4f16_1-MLC";
+const appConfig = { ...prebuiltAppConfig, cacheBackend: "indexeddb" };
+
 const statusEl = document.querySelector("#status");
 const chatEl = document.querySelector("#chat");
 const form = document.querySelector("#composer");
@@ -42,6 +44,7 @@ async function loadModel() {
   try {
     setStatus("Loading Llama 3.2 1B…");
     engine = await CreateMLCEngine(MODEL, {
+      appConfig,
       initProgressCallback: (progress) => {
         const percent = Math.round((progress.progress || 0) * 100);
         setStatus(progress.text || `Loading model… ${percent}%`);
@@ -50,8 +53,9 @@ async function loadModel() {
     setStatus("Ready — the model runs locally in your browser.");
     send.disabled = false;
   } catch (error) {
-    console.error(error);
-    setStatus(`Model failed to load: ${error.message}`);
+    console.error("Llama model load failure:", error);
+    const message = error instanceof Error ? error.message : String(error);
+    setStatus(`Model failed to load: ${message}`);
     send.disabled = true;
   }
 }
