@@ -2,7 +2,14 @@ import { CreateMLCEngine, prebuiltAppConfig } from "@mlc-ai/web-llm";
 import "./style.css";
 
 const MODEL = "Llama-3.2-1B-Instruct-q4f16_1-MLC";
-const appConfig = { ...prebuiltAppConfig, cacheBackend: "indexeddb" };
+const MODEL_URL =
+  "https://huggingface.co/mlc-ai/Llama-3.2-1B-Instruct-q4f16_1-MLC";
+const MODEL_SHARD_URL = `${MODEL_URL}/resolve/main/params_shard_0.bin";
+const appConfig = {
+  ...prebuiltAppConfig,
+  cacheBackend: "opfs",
+  opfsAccessMode: "auto"
+};
 
 const statusEl = document.querySelector("#status");
 const chatEl = document.querySelector("#chat");
@@ -34,6 +41,32 @@ function render() {
   chatEl.scrollTop = chatEl.scrollHeight;
 }
 
+async function checkModelDownloadAccess() {
+  setStatus("Checking access to the Llama model download…");
+
+  const controller = new AbortController();
+  try {
+    const response = await fetch(MODEL_SHARD_URL, {
+      method: "GET",
+      headers: { Range: "bytes=0-0" },
+      cache: "no-store",
+      signal: controller.signal
+    });
+
+    if (!response.ok && response.status !== 206) {
+      throw new Error(`Hugging Face returned HTTP ${response.status}`);
+    }
+  } catch (error) {
+    if (error?.name === "AbortError") return;
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `This browser/network cannot reach the Llama model file on Hugging Face. ${message}`
+    );
+  } finally {
+    controller.abort();
+  }
+}
+
 async function loadModel() {
   if (!("gpu" in navigator)) {
     setStatus("WebGPU is not available in this browser. Try a recent Chrome/Edge build with WebGPU enabled.");
@@ -42,7 +75,9 @@ async function loadModel() {
   }
 
   try {
-    setStatus("Loading Llama 3.2 1B…");
+    await checkModelDownloadAccess();
+    setStatus("Downloading Llama 3.2 1B… this is about 700 MB on the first run.");
+
     engine = await CreateMLCEngine(MODEL, {
       appConfig,
       initProgressCallback: (progress) => {
@@ -50,6 +85,7 @@ async function loadModel() {
         setStatus(progress.text || `Loading model… ${percent}%`);
       }
     });
+
     setStatus("Ready — the model runs locally in your browser.");
     send.disabled = false;
   } catch (error) {
